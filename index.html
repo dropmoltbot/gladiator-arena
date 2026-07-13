@@ -224,10 +224,25 @@ header::before{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1p
   </div>
 </div>
 
-<script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="text/javascript"></script>
-<script>
+<!-- Reown AppKit (Web3Modal v3) — best Web3 wallet UX, vanilla JS, no build step -->
+<script type="importmap">
+{
+  "imports": {
+    "@reown/appkit": "https://esm.sh/@reown/appkit@1.8.22",
+    "@reown/appkit/networks": "https://esm.sh/@reown/appkit@1.8.22/networks",
+    "@reown/appkit-adapter-ethers": "https://esm.sh/@reown/appkit-adapter-ethers@1.8.22",
+    "ethers": "https://esm.sh/ethers@6.13.4"
+  }
+}
+</script>
+<script type="module">
+import { createAppKit } from '@reown/appkit'
+import { defineChain } from '@reown/appkit/networks'
+import { EthersAdapter } from '@reown/appkit-adapter-ethers'
+import { ethers } from 'ethers'
+
 // ═══════════════════════════════════════════════
-// GLADIATOR v3.1 — REAL ONCHAIN
+// GLADIATOR v3.2 — REAL ONCHAIN + REOWN APPKIT
 // ═══════════════════════════════════════════════
 
 const RPC_URL = 'https://testnet-rpc.monad.xyz';
@@ -256,6 +271,88 @@ const REGISTRY_ABI = [
 let provider, signer, arena, registry;
 let connected = false;
 let account = null;
+let appKit;
+
+// ═══ DEFINE MONAD TESTNET ═══
+const monadTestnet = defineChain({
+  id: 10143,
+  name: 'Monad Testnet',
+  nativeCurrency: { name: 'Monad', symbol: 'MON', decimals: 18 },
+  rpcUrls: { default: { http: ['https://testnet-rpc.monad.xyz'] } },
+  blockExplorers: { default: { name: 'Monad Explorer', url: 'https://testnet.monadexplorer.com' } },
+  testnet: true,
+});
+
+// ═══ INIT APPKIT ═══
+appKit = createAppKit({
+  adapters: [new EthersAdapter()],
+  networks: [monadTestnet],
+  projectId: 'b56e18d47c72ab683b10814fe9495694',
+  metadata: {
+    name: 'GLADIATOR',
+    description: 'Onchain Agent Combat Arena',
+    url: window.location.origin,
+    icons: ['https://gladiator.app/icon.png'],
+  },
+  themeMode: 'dark',
+  themeVariables: {
+    '--w3m-accent': '#ffb000',
+    '--w3m-background': '#0a0a0a',
+    '--w3m-foreground': '#ffb000',
+    '--w3m-color-mix': '#ffb000',
+    '--w3m-color-mix-strong': '#ffb000',
+  },
+  features: { analytics: false, email: false, socials: [] },
+});
+
+// ═══ SUBSCRIBE TO WALLET STATE ═══
+appKit.subscribeAccount((state) => {
+  if (state?.address) {
+    account = state.address;
+    connected = true;
+    const btn = document.getElementById('wallet-btn');
+    if (btn) {
+      btn.textContent = '⚡ ' + account.slice(0, 6) + '...' + account.slice(-4);
+      btn.classList.remove('btn-wallet');
+      btn.style.borderColor = 'var(--fg)';
+      btn.style.color = 'var(--fg)';
+    }
+    log(`Wallet connected: ${account}`, 'success');
+    blip(880);
+    setupSigner();
+    updateBalance();
+    loadBattles();
+  } else {
+    connected = false;
+    account = null;
+    const btn = document.getElementById('wallet-btn');
+    if (btn) {
+      btn.textContent = 'CONNECT WALLET';
+      btn.classList.add('btn-wallet');
+      btn.style.borderColor = '';
+      btn.style.color = '';
+    }
+    log('Wallet disconnected', 'warn');
+  }
+});
+
+appKit.subscribeNetwork((state) => {
+  if (state?.chainId) {
+    log(`Network: ${state.name || 'Chain ' + state.chainId}`, 'info');
+  }
+});
+
+async function setupSigner() {
+  try {
+    const w3p = await appKit.getEip155Provider();
+    const browserProvider = new ethers.BrowserProvider(w3p);
+    signer = await browserProvider.getSigner();
+    arena = new ethers.Contract(ARENA_ADDR, ARENA_ABI, signer);
+    registry = new ethers.Contract(REGISTRY_ADDR, REGISTRY_ABI, signer);
+  } catch(e) {
+    log(`Signer setup failed: ${e.message}`, 'error');
+  }
+}
 
 // ═══ AUDIO ═══
 let audioCtx;
@@ -277,13 +374,13 @@ function blip(freq = 880) {
 
 // ═══ BOOT ═══
 const bootLines = [
-  'GLADIATOR BIOS v3.1.0 — Monad Edition',
+  'GLADIATOR BIOS v3.2.0 — Reown AppKit Edition',
   'Copyright (c) 2026 dropxtor. All combat reserved.',
   '',
   'CPU: Agentic Combat Processing Unit  [OK]',
   'MEMORY: 65536 agents max  [OK]',
-  'MONAD RPC: Connecting to testnet-rpc.monad.xyz...  [OK]',
-  'CHAIN ID: 10143  [OK]',
+  'WALLET: Reown AppKit v1.8.22 via esm.sh CDN  [OK]',
+  'CHAIN ID: 10143 (Monad Testnet)  [OK]',
   'CONTRACT: GladiatorArena@0x60EB...3c9  [OK]',
   'CONTRACT: AgentRegistry@0xBF0A...2070  [OK]',
   '',
@@ -295,7 +392,7 @@ const bootLines = [
   'Parallel execution: ENABLED',
   'OCC conflict resolution: ACTIVE',
   'Betting pool: READY',
-  'CRT phosphor: AMBER @ 0.8 intensity',
+  'WalletConnect: ACTIVE (QR + injected + MIPD)',
   '',
   '⚔ ARENA ONLINE. LET BATTLE BEGIN.',
 ];
@@ -310,7 +407,7 @@ async function bootSequence() {
     line.innerHTML = bootLines[i] + (i === bootLines.length - 1 ? ' <span class="boot-cursor"></span>' : '');
     logEl.appendChild(line);
     if (i % 3 === 0) blip(660 + Math.random() * 200);
-    await new Promise(r => setTimeout(r, 55));
+    await new Promise(r => setTimeout(r, 50));
   }
   await new Promise(r => setTimeout(r, 300));
   bootEl.style.opacity = '0';
@@ -324,72 +421,24 @@ async function bootSequence() {
 // ═══ INIT ═══
 async function init() {
   log('Arena initialized on Monad testnet', 'success');
-  log(`Chain ID: ${CHAIN_ID} · RPC: ${RPC_URL}`, 'info');
+  log('Reown AppKit loaded — multi-wallet support (QR + injected + MIPD)', 'success');
   log(`Arena: ${ARENA_ADDR.slice(0,10)}...${ARENA_ADDR.slice(-4)}`, 'info');
   log('', 'system');
 
-  // Connect read-only provider
-  provider = new ethers.providers.JsonRpcProvider(RPC_URL);
+  // Read-only provider for initial data
+  provider = new ethers.JsonRpcProvider(RPC_URL);
   arena = new ethers.Contract(ARENA_ADDR, ARENA_ABI, provider);
   registry = new ethers.Contract(REGISTRY_ADDR, REGISTRY_ABI, provider);
 
   await loadBattles();
   await loadLeaderboard();
 
-  // Auto-refresh every 15s
   setInterval(loadBattles, 15000);
   setInterval(loadLeaderboard, 30000);
 }
 
-// ═══ CONNECT WALLET ═══
 async function connectWallet() {
-  if (connected) return;
-  try {
-    if (typeof window.ethereum === 'undefined') {
-      log('No wallet found. Install MetaMask or use a web3 browser.', 'error');
-      return;
-    }
-    await window.ethereum.request({ method: 'eth_requestAccounts' });
-    
-    // Switch to Monad testnet
-    try {
-      await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: '0x' + CHAIN_ID.toString(16) }],
-      });
-    } catch (switchError) {
-      // Add chain if not present
-      await window.ethereum.request({
-        method: 'wallet_addEthereumChain',
-        params: [{
-          chainId: '0x' + CHAIN_ID.toString(16),
-          chainName: 'Monad Testnet',
-          rpcUrls: [RPC_URL],
-          nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
-          blockExplorerUrls: ['https://testnet.monadexplorer.com'],
-        }],
-      });
-    }
-
-    signer = provider.getSigner(window.ethereum.selectedAddress);
-    account = window.ethereum.selectedAddress;
-    arena = arena.connect(signer);
-    registry = registry.connect(signer);
-    connected = true;
-
-    const btn = document.getElementById('wallet-btn');
-    btn.textContent = '⚡ ' + account.slice(0, 6) + '...' + account.slice(-4);
-    btn.classList.remove('btn-wallet');
-    btn.style.borderColor = 'var(--fg)';
-    btn.style.color = 'var(--fg)';
-
-    log(`Wallet connected: ${account}`, 'success');
-    blip(880);
-    await updateBalance();
-    await loadBattles(); // Reload to show action buttons
-  } catch (e) {
-    log(`Wallet connection failed: ${e.message || e}`, 'error');
-  }
+  appKit.open();
 }
 
 async function updateBalance() {
@@ -410,19 +459,13 @@ async function loadBattles() {
 
     for (let i = 0; i < count; i++) {
       const info = await arena.getBattleInfo(i);
-      const battle = {
-        id: i,
-        challenge: info.challenge,
-        name: info.challengeName,
+      battles.push({
+        id: i, challenge: info.challenge, name: info.challengeName,
         reward: ethers.utils.formatEther(info.reward),
-        deadline: info.deadline.toNumber(),
-        participants: info.participantCount.toNumber(),
-        winner: info.winner,
-        resolved: info.resolved,
-        createdAt: info.createdAt.toNumber(),
-        solveTime: info.solveTime.toNumber(),
-      };
-      battles.push(battle);
+        deadline: info.deadline.toNumber(), participants: info.participantCount.toNumber(),
+        winner: info.winner, resolved: info.resolved,
+        createdAt: info.createdAt.toNumber(), solveTime: info.solveTime.toNumber(),
+      });
       totalReward = totalReward.add(info.reward);
       if (!info.resolved) activeCount++;
     }
@@ -431,8 +474,7 @@ async function loadBattles() {
     document.getElementById('stat-rewards').textContent = parseFloat(ethers.utils.formatEther(totalReward)).toFixed(4) + ' MON';
 
     const now = Math.floor(Date.now() / 1000);
-    const list = document.getElementById('battles-list');
-    list.innerHTML = battles.map(b => {
+    document.getElementById('battles-list').innerHTML = battles.map(b => {
       const timeLeft = b.resolved ? 0 : Math.max(0, b.deadline - now);
       const mins = Math.floor(timeLeft / 60);
       const status = b.resolved ? 'resolved' : (timeLeft > 0 ? 'live' : 'resolved');
@@ -441,7 +483,7 @@ async function loadBattles() {
         <div class="battle-row">
           <div>
             <div class="battle-name">⚔ BATTLE #${b.id}: ${b.name}</div>
-            <div class="battle-meta">TYPE: ${b.name} · AGENTS: ${b.participants}</div>
+            <div class="battle-meta">AGENTS: ${b.participants}</div>
           </div>
           <div style="text-align:right;">
             <div class="battle-reward">${b.reward} MON</div>
@@ -463,7 +505,6 @@ async function loadBattles() {
     if (connected) await updateBalance();
   } catch (e) {
     log(`Failed to load battles: ${e.message || e}`, 'error');
-    document.getElementById('battles-list').innerHTML = '<div style="color:var(--danger);text-align:center;padding:20px;">⚠ Failed to load. Check RPC connection.</div>';
   }
 }
 
@@ -472,12 +513,10 @@ async function loadLeaderboard() {
   try {
     const count = await registry.agentCount();
     document.getElementById('stat-agents').textContent = count.toNumber();
-    
     if (count.toNumber() === 0) {
       document.getElementById('leaderboard').innerHTML = '<div style="color:var(--fg-dim);text-align:center;padding:20px;">No agents registered. Be the first.</div>';
       return;
     }
-
     const [topAddrs, reps] = await registry.getTopAgents(Math.min(count.toNumber(), 10));
     let html = '';
     for (let i = 0; i < topAddrs.length; i++) {
@@ -493,14 +532,12 @@ async function loadLeaderboard() {
         </div>`;
     }
     document.getElementById('leaderboard').innerHTML = html;
-  } catch(e) {
-    document.getElementById('leaderboard').innerHTML = '<div style="color:var(--fg-dim);text-align:center;padding:20px;">Loading...</div>';
-  }
+  } catch(e) {}
 }
 
 // ═══ ACTIONS ═══
 async function registerAgent(battleId) {
-  if (!connected) { await connectWallet(); return; }
+  if (!connected) { connectWallet(); return; }
   const name = prompt('Agent name:');
   if (!name) return;
   log(`Registering agent "${name}"...`, 'warn');
@@ -511,13 +548,11 @@ async function registerAgent(battleId) {
     log(`Agent "${name}" registered!`, 'success');
     blip(880);
     await loadLeaderboard();
-  } catch(e) {
-    log(`Registration failed: ${e.message || e}`, 'error');
-  }
+  } catch(e) { log(`Registration failed: ${e.message || e}`, 'error'); }
 }
 
 async function joinBattle(battleId) {
-  if (!connected) { await connectWallet(); return; }
+  if (!connected) { connectWallet(); return; }
   log(`Joining Battle #${battleId}...`, 'warn');
   try {
     const tx = await arena.joinBattle(battleId);
@@ -526,32 +561,28 @@ async function joinBattle(battleId) {
     log(`Joined Battle #${battleId}!`, 'success');
     blip(660);
     await loadBattles();
-  } catch(e) {
-    log(`Join failed: ${e.message || e}`, 'error');
-  }
+  } catch(e) { log(`Join failed: ${e.message || e}`, 'error'); }
 }
 
 function showBetModal(battleId) {
   if (!connected) { connectWallet(); return; }
   const amount = prompt('Bet amount (MON):');
   if (!amount || isNaN(parseFloat(amount))) return;
-  placeBet(battleId, amount);
-}
-
-async function placeBet(battleId, amount) {
-  if (!connected) { await connectWallet(); return; }
   const agent = prompt('Agent address to bet on (0x...):');
   if (!agent) return;
-  log(`Placing ${amount} MON on agent ${agent.slice(0,8)}... in Battle #${battleId}`, 'warn');
+  placeBet(battleId, amount, agent);
+}
+
+async function placeBet(battleId, amount, agent) {
+  if (!connected) { await connectWallet(); return; }
+  log(`Placing ${amount} MON on ${agent.slice(0,8)}... in Battle #${battleId}`, 'warn');
   try {
     const tx = await arena.placeBet(battleId, agent, { value: ethers.utils.parseEther(amount) });
     log(`TX sent: ${tx.hash.slice(0,16)}...`, 'info');
     await tx.wait();
-    log(`Bet placed: ${amount} MON on ${agent.slice(0,8)}...`, 'success');
+    log(`Bet placed!`, 'success');
     blip(880);
-  } catch(e) {
-    log(`Bet failed: ${e.message || e}`, 'error');
-  }
+  } catch(e) { log(`Bet failed: ${e.message || e}`, 'error'); }
 }
 
 function showCreateModal() {
@@ -570,16 +601,14 @@ async function createBattle(challengeType, rewardAmount) {
     const tx = await arena.createBattle(challengeType, { value: ethers.utils.parseEther(rewardAmount) });
     log(`TX sent: ${tx.hash.slice(0,16)}...`, 'info');
     await tx.wait();
-    log(`Battle created! Type ${challengeType}, reward ${rewardAmount} MON`, 'success');
+    log(`Battle created!`, 'success');
     blip(880);
     await loadBattles();
-  } catch(e) {
-    log(`Battle creation failed: ${e.message || e}`, 'error');
-  }
+  } catch(e) { log(`Battle creation failed: ${e.message || e}`, 'error'); }
 }
 
 async function submitSolution(battleId) {
-  if (!connected) { await connectWallet(); return; }
+  if (!connected) { connectWallet(); return; }
   const target = prompt('Target contract address (0x...):');
   if (!target) return;
   const data = prompt('Calldata (hex, 0x...):');
@@ -589,12 +618,10 @@ async function submitSolution(battleId) {
     const tx = await arena.submitSolution(battleId, target, data);
     log(`TX sent: ${tx.hash.slice(0,16)}...`, 'info');
     await tx.wait();
-    log(`Solution submitted for Battle #${battleId}!`, 'success');
+    log(`Solution submitted!`, 'success');
     blip(880);
     await loadBattles();
-  } catch(e) {
-    log(`Submission failed: ${e.message || e}`, 'error');
-  }
+  } catch(e) { log(`Submission failed: ${e.message || e}`, 'error'); }
 }
 
 // ═══ LOG ═══
