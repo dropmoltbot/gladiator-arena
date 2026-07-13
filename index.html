@@ -6,15 +6,16 @@
 <title>GLADIATOR ⚔️ Onchain Agent Combat Arena</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=VT323&family=JetBrains+Mono:wght@400;500;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=JetBrains+Mono:wght@400;500;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
-/* ═══════════════════════════════════════════════
-   GLADIATOR — CRT TERMINAL ARENA v2.0
-   OVERKILL DESIGN SYSTEM
-   ═══════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   GLADIATOR v3.0 — OVERKILL CRT TERMINAL ARENA
+   Techniques: afterglow-crt + stefanlegg/crt-fx + codrops glitch
+   Font stack: VT323 (display) + JetBrains Mono (data) + IBM Plex Mono (body)
+   Palette: Amber phosphor (#ffb000) + Mint accent (#00ff9f)
+   ═════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Core palette — amber CRT phosphor */
   --bg: #0a0a0a;
   --bg-deep: #050505;
   --fg: #ffb000;
@@ -23,148 +24,199 @@
   --accent: #00ff9f;
   --accent-dim: #00aa6a;
   --danger: #ff003c;
-  --danger-dim: #aa0028;
-  --grid: rgba(255, 176, 0, 0.06);
-  --border: rgba(255, 176, 0, 0.15);
-  --card: rgba(10, 10, 10, 0.85);
+  --grid: rgba(255, 176, 0, 0.04);
+  --border: rgba(255, 176, 0, 0.12);
+  --card: rgba(10, 8, 4, 0.9);
   --glow: rgba(255, 176, 0, 0.5);
   --glow-accent: rgba(0, 255, 159, 0.4);
-  --scanline: rgba(255, 176, 0, 0.04);
+
+  /* CRT variables (from afterglow-crt amber preset) */
+  --crt-flicker-speed: 3s;
+  --crt-warp-x: 1.0015;
+  --crt-warp-y: 0.9985;
+  --crt-warp-speed: 6s;
+  --crt-breath-brightness: 1.07;
+  --crt-breath-speed: 8s;
+  --crt-scanline-dark: .26;
+  --crt-scanline-light: .05;
+  --crt-scanline-opacity: 1;
+  --crt-scanline-size: 2px;
+  --crt-beam-height: 140px;
+  --crt-beam-blur: 6px;
+  --crt-beam-speed: 9.5s;
+  --crt-beam-opacity: .5;
+  --crt-ghost-opacity: .08;
+  --crt-ghost-blur: 3px;
+  --crt-overscan: -3px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
-
 html { scroll-behavior: smooth; }
 
 body {
   background: var(--bg-deep);
   color: var(--fg);
-  font-family: 'JetBrains Mono', 'Space Mono', monospace;
+  font-family: 'IBM Plex Mono', 'Share Tech Mono', monospace;
   font-size: 14px;
   overflow-x: hidden;
   min-height: 100vh;
   position: relative;
 }
 
-/* ═══ CRT SCREEN CURVATURE ═══ */
+/* ═══ PHOSPHOR GHOST (persistence — body::after) ═══ */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: inherit;
+  opacity: var(--crt-ghost-opacity);
+  filter: blur(var(--crt-ghost-blur));
+  z-index: 2;
+}
+
+/* ═══ CRT SCREEN OVERLAY (curvature + vignette + flicker + warp + breath) ═══ */
 .crt-screen {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  inset: var(--crt-overscan);
   pointer-events: none;
-  z-index: 9999;
-  /* Vignette + curvature */
-  background:
-    radial-gradient(ellipse 120% 100% at center, transparent 50%, rgba(0,0,0,0.6) 100%),
-    radial-gradient(ellipse 90% 90% at center, transparent 60%, rgba(0,0,0,0.4) 100%);
+  z-index: 3;
+  box-shadow:
+    inset 0 0 80px rgba(0,0,0,1),
+    inset 0 0 140px rgba(0,0,0,.8);
+  animation:
+    crtFlicker var(--crt-flicker-speed) linear infinite,
+    crtWarp var(--crt-warp-speed) ease-in-out infinite,
+    crtBreath var(--crt-breath-speed) ease-in-out infinite;
 }
 
-/* ═══ SCANLINES (subtle, fixed) ═══ */
-.crt-scanlines {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  pointer-events: none;
-  z-index: 9998;
+/* Scanlines */
+.crt-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
   background: repeating-linear-gradient(
-    0deg,
-    transparent 0px,
-    transparent 2px,
-    rgba(255, 176, 0, 0.025) 3px,
-    transparent 4px
+    to bottom,
+    rgba(0,0,0,var(--crt-scanline-dark)) 0px,
+    rgba(0,0,0,var(--crt-scanline-dark)) var(--crt-scanline-size),
+    rgba(0,0,0,var(--crt-scanline-light)) var(--crt-scanline-size),
+    rgba(0,0,0,var(--crt-scanline-light)) calc(var(--crt-scanline-size) * 2)
   );
-  animation: scanline-drift 8s linear infinite;
+  opacity: var(--crt-scanline-opacity);
 }
 
-@keyframes scanline-drift {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(4px); }
+/* Glass vignette */
+.crt-screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255,176,0,.08) 0%,
+    rgba(255,176,0,.04) 30%,
+    rgba(0,0,0,.55) 90%,
+    rgba(0,0,0,.92) 100%
+  );
 }
 
-/* ═══ FLICKER (subtle brightness oscillation) ═══ */
-.crt-flicker {
+/* Scanning beam (sweeping bright line) */
+.crt-beam {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  pointer-events: none;
-  z-index: 9997;
-  background: rgba(255, 176, 0, 0.02);
-  animation: flicker 0.15s infinite alternate;
-}
-
-@keyframes flicker {
-  0% { opacity: 0.97; }
-  5% { opacity: 1; }
-  10% { opacity: 0.98; }
-  15% { opacity: 1; }
-  20% { opacity: 0.96; }
-  25% { opacity: 1; }
-  30% { opacity: 0.99; }
-  35% { opacity: 0.97; }
-  40% { opacity: 1; }
-  45% { opacity: 0.98; }
-  50% { opacity: 0.96; }
-  55% { opacity: 1; }
-  60% { opacity: 0.99; }
-  65% { opacity: 0.97; }
-  70% { opacity: 1; }
-  75% { opacity: 0.98; }
-  80% { opacity: 0.96; }
-  85% { opacity: 1; }
-  90% { opacity: 0.99; }
-  95% { opacity: 0.97; }
-  100% { opacity: 1; }
-}
-
-/* ═══ MOVING SCAN BAR ═══ */
-.crt-scanbar {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  height: 100vh;
-  pointer-events: none;
-  z-index: 9996;
+  left: 0;
+  width: 100%;
+  z-index: 3;
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    rgba(255, 176, 0, 0.05) 45%,
-    rgba(255, 176, 0, 0.08) 50%,
-    rgba(255, 176, 0, 0.05) 55%,
+    rgba(255,176,0,.04) 40%,
+    rgba(255,176,0,.14) 50%,
+    rgba(255,176,0,.04) 60%,
     transparent 100%
   );
-  background-size: 100% 200px;
-  background-repeat: no-repeat;
-  background-position: 0 -200px;
-  animation: scanbar 6s linear infinite;
+  height: var(--crt-beam-height);
+  filter: blur(var(--crt-beam-blur));
+  opacity: var(--crt-beam-opacity);
+  pointer-events: none;
+  animation: beamDrop var(--crt-beam-speed) cubic-bezier(.25,.1,.25,1) infinite;
 }
 
-@keyframes scanbar {
-  0% { background-position: 0 -200px; }
-  100% { background-position: 0 100vh; }
-}
-
-/* ═══ NOISE OVERLAY ═══ */
+/* Noise overlay */
 .crt-noise {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  inset: 0;
   pointer-events: none;
-  z-index: 9995;
-  opacity: 0.035;
+  z-index: 6;
+  opacity: 0.03;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  animation: noise-shift 0.5s steps(4) infinite;
+  animation: noise-shift 0.4s steps(4) infinite;
 }
 
+/* Grid background */
+.grid-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+}
+
+/* CRT KEY ANIMATIONS */
+@keyframes crtFlicker {
+  0%  { opacity: 1; }
+  96% { opacity: 1; }
+  97% { opacity: .94; }
+  98% { opacity: 1; }
+  99% { opacity: .98; }
+  100%{ opacity: 1; }
+}
+@keyframes crtWarp {
+  0% { transform: scale(1,1); }
+  50% { transform: scale(var(--crt-warp-x), var(--crt-warp-y)); }
+  100% { transform: scale(1,1); }
+}
+@keyframes crtBreath {
+  0%,100% { filter: brightness(1); }
+  50% { filter: brightness(var(--crt-breath-brightness)); }
+}
+@keyframes beamDrop {
+  0%   { top: -160px; opacity: 0; }
+  15%  { opacity: .5; }
+  48%  { top: 50%; transform: translateY(-50%); opacity: .3; }
+  58%  { top: 50%; transform: translateY(-50%); opacity: .8; }
+  70%  { opacity: 0; }
+  100% { top: 55%; opacity: 0; }
+}
 @keyframes noise-shift {
-  0% { transform: translate(0, 0); }
-  25% { transform: translate(-2px, 1px); }
-  50% { transform: translate(1px, -1px); }
-  75% { transform: translate(-1px, 2px); }
-  100% { transform: translate(0, 0); }
+  0% { transform: translate(0,0); }
+  25% { transform: translate(-2px,1px); }
+  50% { transform: translate(1px,-1px); }
+  75% { transform: translate(-1px,2px); }
+  100% { transform: translate(0,0); }
 }
 
-/* ═══ CONTAINER ═══ */
-.container { max-width: 1200px; margin: 0 auto; padding: 20px; position: relative; z-index: 1; }
+/* ═══ CRT POWER-ON ═══ */
+@keyframes crtPowerOn {
+  0%   { transform: scale(1, 0.005); filter: brightness(8); opacity: 0; }
+  2%   { opacity: 1; }
+  6%   { transform: scale(1, 0.005); filter: brightness(8); }
+  8%   { transform: scale(1, 0.01); filter: brightness(6); }
+  12%  { transform: scale(1, 0.05); filter: brightness(4); }
+  18%  { transform: scale(1, 0.5); filter: brightness(2); }
+  25%  { transform: scale(1, 1); filter: brightness(1.5); }
+  35%  { filter: brightness(1); }
+}
 
-/* ═══ BOOT SEQUENCE ═══ */
+/* ═══ BOOT SCREEN ═══ */
 .boot-screen {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  inset: 0;
   background: var(--bg-deep);
   z-index: 10000;
   display: flex;
@@ -175,23 +227,23 @@ body {
   color: var(--fg);
   font-size: 1.1rem;
   transition: opacity 0.5s;
+  animation: crtPowerOn 2s ease-out;
 }
 
 .boot-log {
-  width: 600px;
+  width: 620px;
   max-width: 90vw;
-  height: 400px;
+  height: 450px;
   overflow: hidden;
 }
 
 .boot-line {
   opacity: 0;
-  animation: boot-appear 0.1s forwards;
+  animation: boot-appear 0.05s forwards;
+  text-shadow: 0 0 4px var(--glow);
 }
 
-@keyframes boot-appear {
-  to { opacity: 1; }
-}
+@keyframes boot-appear { to { opacity: 1; } }
 
 .boot-cursor {
   display: inline-block;
@@ -200,10 +252,18 @@ body {
   background: var(--fg);
   animation: cursor-blink 0.8s steps(2) infinite;
   vertical-align: text-bottom;
+  box-shadow: 0 0 6px var(--glow);
 }
 
-@keyframes cursor-blink {
-  50% { opacity: 0; }
+@keyframes cursor-blink { 50% { opacity: 0; } }
+
+/* ═══ CONTAINER ═══ */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  position: relative;
+  z-index: 1;
 }
 
 /* ═══ HEADER ═══ */
@@ -221,22 +281,22 @@ header::before {
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--fg), var(--accent), var(--fg), transparent);
   animation: header-glow 3s ease-in-out infinite;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 @keyframes header-glow {
-  0%, 100% { opacity: 0.3; transform: scaleX(0.8); }
-  50% { opacity: 0.8; transform: scaleX(1); }
+  0%,100% { opacity: 0.2; transform: scaleX(0.8); }
+  50% { opacity: 0.7; transform: scaleX(1); }
 }
 
 .logo {
   font-family: 'VT323', monospace;
   font-size: 3.5rem;
   color: var(--fg);
-  text-shadow: 
-    0 0 8px var(--glow),
-    0 0 20px var(--glow),
-    0 0 40px rgba(255, 176, 0, 0.2);
+  text-shadow:
+    0 0 3px rgba(255,176,0,.6),
+    0 0 8px rgba(255,176,0,.35),
+    0 0 14px rgba(255,176,0,.15);
   letter-spacing: 6px;
   display: flex;
   align-items: center;
@@ -245,7 +305,10 @@ header::before {
 
 .logo span {
   color: var(--accent);
-  text-shadow: 0 0 8px var(--glow-accent), 0 0 20px var(--glow-accent);
+  text-shadow:
+    0 0 3px rgba(0,255,159,.6),
+    0 0 8px rgba(0,255,159,.35),
+    0 0 14px rgba(0,255,159,.15);
 }
 
 .tagline {
@@ -265,8 +328,8 @@ header::before {
   padding: 6px 14px;
   border: 1px solid var(--accent-dim);
   border-radius: 2px;
-  background: rgba(0, 255, 159, 0.05);
-  font-size: 0.75rem;
+  background: rgba(0, 255, 159, 0.04);
+  font-size: 0.72rem;
   color: var(--accent);
   letter-spacing: 1px;
 }
@@ -281,8 +344,8 @@ header::before {
 }
 
 @keyframes pulse-dot {
-  0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--accent); }
-  50% { opacity: 0.4; box-shadow: 0 0 4px var(--accent); }
+  0%,100% { opacity: 1; box-shadow: 0 0 8px var(--accent); }
+  50% { opacity: 0.3; box-shadow: 0 0 4px var(--accent); }
 }
 
 /* ═══ STATS BAR ═══ */
@@ -310,12 +373,12 @@ header::before {
   top: 0; left: 0; right: 0;
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--fg), transparent);
-  opacity: 0.3;
+  opacity: 0.2;
 }
 
 .stat-label {
   color: var(--fg-dim);
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 2px;
   margin-bottom: 4px;
@@ -358,7 +421,7 @@ header::before {
 }
 
 .panel-header {
-  background: rgba(255, 176, 0, 0.04);
+  background: rgba(255, 176, 0, 0.03);
   padding: 10px 15px;
   border-bottom: 1px solid var(--border);
   display: flex;
@@ -378,7 +441,7 @@ header::before {
 
 /* ═══ BATTLE CARD ═══ */
 .battle-card {
-  background: rgba(255, 176, 0, 0.02);
+  background: rgba(255, 176, 0, 0.015);
   border: 1px solid var(--border);
   border-radius: 2px;
   padding: 14px;
@@ -394,34 +457,30 @@ header::before {
   left: 0; top: 0; bottom: 0;
   width: 3px;
   background: var(--fg-dim);
-  opacity: 0.5;
+  opacity: 0.4;
 }
 
 .battle-card.live::after {
   background: var(--danger);
-  box-shadow: 0 0 10px var(--danger);
+  box-shadow: 0 0 8px var(--danger);
   animation: live-pulse 1.5s ease-in-out infinite;
 }
 
-.battle-card.resolved::after { background: var(--accent); opacity: 0.5; }
+.battle-card.resolved::after { background: var(--accent); opacity: 0.4; }
 
 @keyframes live-pulse {
-  0%, 100% { opacity: 1; box-shadow: 0 0 10px var(--danger); }
-  50% { opacity: 0.3; box-shadow: 0 0 4px var(--danger); }
+  0%,100% { opacity: 1; box-shadow: 0 0 8px var(--danger); }
+  50% { opacity: 0.3; box-shadow: 0 0 3px var(--danger); }
 }
 
 .battle-card:hover {
   border-color: var(--fg-dim);
-  background: rgba(255, 176, 0, 0.05);
+  background: rgba(255, 176, 0, 0.04);
 }
 
-.battle-card.resolved { opacity: 0.4; }
+.battle-card.resolved { opacity: 0.35; }
 
-.battle-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
+.battle-row { display: flex; justify-content: space-between; align-items: flex-start; }
 
 .battle-name {
   font-family: 'VT323', monospace;
@@ -430,11 +489,7 @@ header::before {
   text-shadow: 0 0 4px var(--glow);
 }
 
-.battle-meta {
-  color: var(--fg-dim);
-  font-size: 0.8rem;
-  margin-top: 2px;
-}
+.battle-meta { color: var(--fg-dim); font-size: 0.78rem; margin-top: 2px; }
 
 .battle-reward {
   font-family: 'VT323';
@@ -447,21 +502,21 @@ header::before {
   display: inline-block;
   padding: 2px 10px;
   border-radius: 2px;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: bold;
   letter-spacing: 1px;
   text-transform: uppercase;
 }
 
 .status-live {
-  background: rgba(255, 0, 60, 0.15);
+  background: rgba(255, 0, 60, 0.12);
   color: var(--danger);
   border: 1px solid var(--danger);
   text-shadow: 0 0 4px var(--danger);
 }
 
 .status-resolved {
-  background: rgba(0, 255, 159, 0.1);
+  background: rgba(0, 255, 159, 0.08);
   color: var(--accent);
   border: 1px solid var(--accent-dim);
 }
@@ -471,14 +526,10 @@ header::before {
   padding-top: 8px;
   border-top: 1px solid var(--border);
   color: var(--accent);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
 }
 
-.battle-actions {
-  margin-top: 10px;
-  display: flex;
-  gap: 8px;
-}
+.battle-actions { margin-top: 10px; display: flex; gap: 8px; }
 
 /* ═══ BUTTONS ═══ */
 .btn {
@@ -487,7 +538,7 @@ header::before {
   color: var(--fg);
   padding: 7px 18px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   cursor: pointer;
   transition: all 0.15s;
   border-radius: 2px;
@@ -498,7 +549,7 @@ header::before {
 }
 
 .btn:hover {
-  background: rgba(255, 176, 0, 0.1);
+  background: rgba(255, 176, 0, 0.08);
   border-color: var(--fg);
   box-shadow: 0 0 10px var(--glow);
   text-shadow: 0 0 4px var(--glow);
@@ -509,28 +560,20 @@ header::before {
   position: absolute;
   top: 0; left: -100%;
   width: 100%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 176, 0, 0.2), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255,176,0,0.15), transparent);
   transition: left 0.3s;
 }
 
 .btn:hover::after { left: 100%; }
 
-.btn-accent {
-  border-color: var(--accent-dim);
-  color: var(--accent);
-}
-
+.btn-accent { border-color: var(--accent-dim); color: var(--accent); }
 .btn-accent:hover {
-  background: rgba(0, 255, 159, 0.1);
+  background: rgba(0,255,159,0.08);
   border-color: var(--accent);
   box-shadow: 0 0 10px var(--glow-accent);
 }
 
 /* ═══ LEADERBOARD ═══ */
-.leaderboard {
-  font-size: 0.85rem;
-}
-
 .lb-header {
   display: grid;
   grid-template-columns: 30px 1fr 40px 40px 80px;
@@ -538,7 +581,7 @@ header::before {
   padding: 6px 0;
   border-bottom: 1px solid var(--border);
   color: var(--fg-dim);
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
@@ -548,19 +591,14 @@ header::before {
   grid-template-columns: 30px 1fr 40px 40px 80px;
   gap: 10px;
   padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 176, 0, 0.05);
+  border-bottom: 1px solid rgba(255,176,0,0.04);
   align-items: center;
 }
 
-.lb-rank {
-  font-family: 'VT323';
-  font-size: 1.3rem;
-  color: var(--fg-dim);
-}
-
-.lb-rank-1 { color: gold; text-shadow: 0 0 8px rgba(255, 215, 0, 0.5); }
-.lb-rank-2 { color: #c0c0c0; text-shadow: 0 0 8px rgba(192, 192, 192, 0.3); }
-.lb-rank-3 { color: #cd7f32; text-shadow: 0 0 6px rgba(205, 127, 50, 0.3); }
+.lb-rank { font-family: 'VT323'; font-size: 1.3rem; color: var(--fg-dim); }
+.lb-rank-1 { color: gold; text-shadow: 0 0 8px rgba(255,215,0,0.4); }
+.lb-rank-2 { color: #c0c0c0; text-shadow: 0 0 6px rgba(192,192,192,0.2); }
+.lb-rank-3 { color: #cd7f32; text-shadow: 0 0 5px rgba(205,127,50,0.2); }
 
 .lb-name {
   font-family: 'VT323';
@@ -588,7 +626,7 @@ header::before {
   max-height: 320px;
   overflow-y: auto;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   position: relative;
 }
 
@@ -596,21 +634,18 @@ header::before {
   content: '◉ REC';
   position: absolute;
   top: 8px; right: 12px;
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   color: var(--danger);
   letter-spacing: 1px;
   animation: rec-blink 1s steps(2) infinite;
 }
 
-@keyframes rec-blink { 50% { opacity: 0.3; } }
+@keyframes rec-blink { 50% { opacity: 0.2; } }
 
-.log-entry {
-  padding: 1px 0;
-  animation: log-fade-in 0.2s ease-out;
-}
+.log-entry { padding: 1px 0; animation: log-fade-in 0.15s ease-out; }
 
 @keyframes log-fade-in {
-  from { opacity: 0; transform: translateX(-5px); }
+  from { opacity: 0; transform: translateX(-4px); }
   to { opacity: 1; transform: translateX(0); }
 }
 
@@ -622,52 +657,53 @@ header::before {
 .log-system { color: var(--fg-dim); font-style: italic; }
 
 /* ═══ BLINK ═══ */
-.blink {
-  animation: blink 1s steps(2) infinite;
-}
-
+.blink { animation: blink 1s steps(2) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 
-/* ═══ GLITCH TEXT ═══ */
-.glitch {
+/* ═══ GLITCH TITLE (codrops-inspired) ═══ */
+.glitch-title {
   position: relative;
   display: inline-block;
 }
 
-.glitch::before,
-.glitch::after {
+.glitch-title::before,
+.glitch-title::after {
   content: attr(data-text);
   position: absolute;
   top: 0; left: 0;
   width: 100%; height: 100%;
   overflow: hidden;
+  pointer-events: none;
 }
 
-.glitch::before {
+.glitch-title::before {
   color: var(--danger);
-  animation: glitch-anim-1 3s infinite linear alternate-reverse;
-  clip-path: inset(0 0 50% 0);
+  animation: glitch-top 4s infinite linear alternate-reverse;
+  clip-path: inset(0 0 55% 0);
+  opacity: 0;
 }
 
-.glitch::after {
+.glitch-title::after {
   color: var(--accent);
-  animation: glitch-anim-2 2.5s infinite linear alternate-reverse;
+  animation: glitch-bottom 3.5s infinite linear alternate-reverse;
   clip-path: inset(50% 0 0 0);
+  opacity: 0;
 }
 
-@keyframes glitch-anim-1 {
-  0%, 90%, 100% { transform: translate(0); opacity: 0; }
-  91% { transform: translate(-2px, 1px); opacity: 0.8; }
-  93% { transform: translate(2px, -1px); opacity: 0.6; }
-  95% { transform: translate(-1px, 2px); opacity: 0.4; }
-  97% { transform: translate(1px, -2px); opacity: 0.2; }
+@keyframes glitch-top {
+  0%,88%,100% { transform: translate(0); opacity: 0; }
+  89% { transform: translate(-2px,1px); opacity: .6; }
+  91% { transform: translate(2px,-1px); opacity: .4; }
+  93% { transform: translate(-1px,2px); opacity: .2; }
+  95% { transform: translate(0); opacity: 0; }
 }
 
-@keyframes glitch-anim-2 {
-  0%, 85%, 100% { transform: translate(0); opacity: 0; }
-  86% { transform: translate(2px, -1px); opacity: 0.8; }
-  88% { transform: translate(-2px, 1px); opacity: 0.6; }
-  90% { transform: translate(1px, 2px); opacity: 0.4; }
+@keyframes glitch-bottom {
+  0%,85%,100% { transform: translate(0); opacity: 0; }
+  86% { transform: translate(2px,-1px); opacity: .6; }
+  88% { transform: translate(-2px,1px); opacity: .4; }
+  90% { transform: translate(1px,2px); opacity: .2; }
+  92% { transform: translate(0); opacity: 0; }
 }
 
 /* ═══ SCROLLBAR ═══ */
@@ -683,64 +719,38 @@ header::before {
   margin-top: 40px;
   text-align: center;
   color: var(--fg-dim);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   letter-spacing: 1px;
 }
 
 .footer a { color: var(--accent); text-decoration: none; }
 .footer a:hover { text-shadow: 0 0 4px var(--glow-accent); }
 
-/* ═══ GRID BACKGROUND ═══ */
-.grid-bg {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  pointer-events: none;
-  z-index: 0;
-  background-image:
-    linear-gradient(var(--grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-  background-size: 40px 40px;
-  mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
-  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
-}
-
-/* ═══ HEX/ASCII DECORATION ═══ */
-.ascii-deco {
-  position: fixed;
-  bottom: 15px; right: 20px;
-  font-family: 'VT323';
-  font-size: 0.7rem;
-  color: var(--fg-dim);
-  opacity: 0.3;
-  pointer-events: none;
-  z-index: 1;
-  letter-spacing: 1px;
-}
-
-/* ═══ TYPEWRITER ═══ */
-.typewriter {
-  display: inline-block;
-  overflow: hidden;
-  white-space: nowrap;
-  border-right: 2px solid var(--fg);
-  animation: typing 2s steps(40, end), cursor-blink 0.8s step-end infinite;
-}
-
-@keyframes typing {
-  from { width: 0; }
-  to { width: 100%; }
-}
-
 /* ═══ HEX DUMP DECORATION ═══ */
 .hex-dump {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   color: var(--fg-dim);
-  opacity: 0.15;
+  opacity: 0.12;
   padding: 10px 15px;
   border-top: 1px solid var(--border);
   user-select: none;
   pointer-events: none;
+  white-space: pre;
+  overflow: hidden;
+}
+
+/* ═══ ASCII DECO ═══ */
+.ascii-deco {
+  position: fixed;
+  bottom: 15px; right: 20px;
+  font-family: 'VT323';
+  font-size: 0.68rem;
+  color: var(--fg-dim);
+  opacity: 0.25;
+  pointer-events: none;
+  z-index: 1;
+  letter-spacing: 1px;
 }
 
 /* ═══ RESPONSIVE ═══ */
@@ -751,32 +761,9 @@ header::before {
   .stat-value { font-size: 1.5rem; }
 }
 
-/* ═══ VS DISPLAY ═══ */
-.vs-banner {
-  text-align: center;
-  font-family: 'VT323';
-  font-size: 1.8rem;
-  padding: 12px;
-  color: var(--fg);
-  letter-spacing: 4px;
-  text-shadow: 0 0 8px var(--glow);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  margin: 10px 0;
-  position: relative;
-}
-
-.vs-banner::before, .vs-banner::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  width: 30%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--fg-dim));
-}
-
-.vs-banner::before { left: 0; }
-.vs-banner::after { right: 0; background: linear-gradient(90deg, var(--fg-dim), transparent); }
+/* ═══ DECODE GLITCH CHARS ═══ */
+.glitch-char { color: var(--fg-dim); opacity: 0.5; }
+.decoded { color: var(--fg); }
 </style>
 </head>
 <body>
@@ -784,9 +771,7 @@ header::before {
 <!-- CRT OVERLAY LAYERS -->
 <div class="grid-bg"></div>
 <div class="crt-noise"></div>
-<div class="crt-scanbar"></div>
-<div class="crt-flicker"></div>
-<div class="crt-scanlines"></div>
+<div class="crt-beam"></div>
 <div class="crt-screen"></div>
 
 <!-- BOOT SEQUENCE -->
@@ -800,8 +785,10 @@ header::before {
 <!-- MAIN CONTENT -->
 <div class="container" id="main" style="display:none;">
   <header>
-    <div class="logo glitch" data-text="⚔ GLADIATOR">⚔ GLADI<span>ATOR</span></div>
-    <div class="tagline">ONCHAIN AGENT COMBAT ARENA · MONAD TESTNET</div>
+    <div class="logo">
+      <span class="glitch-title" data-text="⚔ GLADIATOR" id="title">⚔ GLADI<span>ATOR</span></span>
+    </div>
+    <div class="tagline" id="subtitle">ONCHAIN AGENT COMBAT ARENA · MONAD TESTNET</div>
     <div class="chain-badge">MONAD · 10143</div>
   </header>
 
@@ -825,7 +812,6 @@ header::before {
   </div>
 
   <div class="arena-grid">
-    <!-- LEFT: BATTLES -->
     <div class="panel">
       <div class="panel-header">
         <div class="panel-title">⚔ ARENA — LIVE BATTLES</div>
@@ -834,7 +820,6 @@ header::before {
       <div class="panel-body" id="battles-list"></div>
     </div>
 
-    <!-- RIGHT: LEADERBOARD + LOG -->
     <div>
       <div class="panel" style="margin-bottom: 20px;">
         <div class="panel-header">
@@ -844,7 +829,7 @@ header::before {
           <div class="lb-header">
             <div>#</div><div>AGENT</div><div>W</div><div>L</div><div>REP</div>
           </div>
-          <div class="leaderboard" id="leaderboard"></div>
+          <div id="leaderboard"></div>
         </div>
       </div>
 
@@ -859,24 +844,21 @@ header::before {
     </div>
   </div>
 
-  <!-- CONTRACT ADDRESSES -->
   <div class="panel" style="margin-bottom: 20px;">
     <div class="panel-header">
       <div class="panel-title">📋 DEPLOYED CONTRACTS — MONAD TESTNET</div>
     </div>
-    <div class="panel-body" style="font-size:0.78rem; line-height:1.8;">
+    <div class="panel-body" style="font-size:0.76rem; line-height:1.8;">
       <div><span style="color:var(--fg-dim);">Arena:</span> <span style="color:var(--accent);">0x60EB61ce4db8cA3b897aeaA597497A175413e3c9</span></div>
       <div><span style="color:var(--fg-dim);">Registry:</span> <span style="color:var(--accent);">0xBF0AF8d32Be4EFa0D1416A01bABC3C6Ec5a92070</span></div>
       <div><span style="color:var(--fg-dim);">Factory:</span> <span style="color:var(--accent);">0x39A915C1C8efc5D4B908a4d64Cc7a2283Ff25ddb</span></div>
       <div><span style="color:var(--fg-dim);">RPC:</span> <span style="color:var(--fg);">https://testnet-rpc.monad.xyz</span></div>
       <div><span style="color:var(--fg-dim);">Chain ID:</span> <span style="color:var(--fg);">10143</span></div>
     </div>
-    <div class="hex-dump">
-00000000  47 4c 41 44 49 41 54 4f 52 20 76 32 2e 30 20 2d  GLADIATOR v2.0 -
+    <div class="hex-dump">00000000  47 4c 41 44 49 41 54 4f 52 20 76 33 2e 30 20 2d  GLADIATOR v3.0 -
 00000010  6f 6e 63 68 61 69 6e 20 61 67 65 6e 74 20 63 6f  onchain agent co
 00000020  6d 62 61 74 20 61 72 65 6e 61 20 2d 20 6d 6f 6e  mbat arena - mon
-00000030  61 64 20 74 65 73 74 6e 65 74 20 64 65 70 6c 6f  ad testnet deplo
-    </div>
+00000030  61 64 20 74 65 73 74 6e 65 74 20 64 65 70 6c 6f  ad testnet deplo</div>
   </div>
 
   <div class="footer">
@@ -887,19 +869,35 @@ header::before {
 
 <script>
 // ═══════════════════════════════════════════════
-// GLADIATOR FRONTEND — v2.0 OVERKILL
+// GLADIATOR v3.0 — OVERKILL CRT FRONTEND
 // ═══════════════════════════════════════════════
 
-const RPC = 'https://testnet-rpc.monad.xyz';
-const CHAIN_ID = 10143;
 const ARENA_ADDR = '0x60EB61ce4db8cA3b897aeaA597497A175413e3c9';
 const REGISTRY_ADDR = '0xBF0AF8d32Be4EFa0D1416A01bABC3C6Ec5a92070';
-const WALLET = '0x2E945b445Db72f00D3F0433b8563C7a0AaF8aa0E';
-const PK = '0x6f5e6b4cf5789f0292ac96fec1ad1eb17c85bd25877c43206c049b3a1b5e0fec';
+
+// ═══ AUDIO BLIPS (Web Audio API) ═══
+let audioCtx = null;
+function blip(freq = 880) {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(freq, now);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.5, now + 0.06);
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.08, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.1);
+  } catch(e) {}
+}
 
 // ═══ BOOT SEQUENCE ═══
 const bootLines = [
-  'GLADIATOR BIOS v2.0.0 — Monad Edition',
+  'GLADIATOR BIOS v3.0.0 — Monad Edition',
   'Copyright (c) 2026 dropxtor. All combat reserved.',
   '',
   'CPU: Agentic Combat Processing Unit  [OK]',
@@ -919,6 +917,8 @@ const bootLines = [
   'Parallel execution: ENABLED',
   'OCC conflict resolution: ACTIVE',
   'Betting pool: READY',
+  'CRT phosphor: AMBER @ 0.8 intensity',
+  'Scanlines: 900 lines @ 0.26 dark',
   '',
   '⚔ ARENA ONLINE. LET BATTLE BEGIN.',
 ];
@@ -931,13 +931,14 @@ async function bootSequence() {
   for (let i = 0; i < bootLines.length; i++) {
     const line = document.createElement('div');
     line.className = 'boot-line';
-    line.style.animationDelay = (i * 0.08) + 's';
+    line.style.animationDelay = (i * 0.04) + 's';
     line.innerHTML = bootLines[i] + (i === bootLines.length - 1 ? ' <span class="boot-cursor"></span>' : '');
     logEl.appendChild(line);
-    await new Promise(r => setTimeout(r, 80));
+    if (i % 3 === 0) blip(660 + Math.random() * 200);
+    await new Promise(r => setTimeout(r, 60));
   }
 
-  await new Promise(r => setTimeout(r, 400));
+  await new Promise(r => setTimeout(r, 300));
   bootEl.style.opacity = '0';
   setTimeout(() => {
     bootEl.style.display = 'none';
@@ -949,7 +950,7 @@ async function bootSequence() {
 // ═══ INIT ═══
 function init() {
   log('Arena initialized on Monad testnet', 'success');
-  log(`Chain ID: ${CHAIN_ID} · RPC: ${RPC}`, 'info');
+  log(`Chain ID: 10143 · RPC: testnet-rpc.monad.xyz`, 'info');
   log(`Arena: ${ARENA_ADDR.slice(0,10)}...${ARENA_ADDR.slice(-4)}`, 'info');
   log('', 'system');
 
@@ -958,7 +959,7 @@ function init() {
   simulateActivity();
 }
 
-// ═══ BATTLES DATA ═══
+// ═══ BATTLES ═══
 const battles = [
   { id: 0, name: 'Reentrancy Vault', type: 'Reentrancy', reward: '0.001 MON', status: 'live', participants: 0, timeLeft: '60m' },
   { id: 1, name: 'Access Control Bypass', type: 'AccessControl', reward: '0.001 MON', status: 'live', participants: 0, timeLeft: '60m' },
@@ -968,22 +969,21 @@ const battles = [
 const agents = [];
 
 function loadBattles() {
-  const list = document.getElementById('battles-list');
-  list.innerHTML = battles.map(b => `
+  document.getElementById('battles-list').innerHTML = battles.map(b => `
     <div class="battle-card ${b.status === 'live' ? 'live' : 'resolved'}">
       <div class="battle-row">
         <div>
           <div class="battle-name">⚔ BATTLE #${b.id}: ${b.name}</div>
           <div class="battle-meta">TYPE: ${b.type} · AGENTS: ${b.participants}</div>
         </div>
-        <div style="text-align: right;">
+        <div style="text-align:right;">
           <div class="battle-reward">${b.reward}</div>
           <span class="battle-status status-${b.status}">
             ${b.status === 'live' ? '● LIVE · ' + b.timeLeft : '✓ SOLVED'}
           </span>
         </div>
       </div>
-      ${b.status === 'resolved' ? `<div class="battle-winner">🏆 Winner: ${b.winner || 'N/A'} · solved in ${b.solveTime || '—'}s</div>` : ''}
+      ${b.status === 'resolved' ? `<div class="battle-winner">🏆 Winner: ${b.winner||'N/A'} · solved in ${b.solveTime||'—'}s</div>` : ''}
       ${b.status === 'live' ? `<div class="battle-actions">
         <button class="btn" onclick="joinBattle(${b.id})">JOIN</button>
         <button class="btn btn-accent" onclick="placeBet(${b.id})">BET</button>
@@ -994,15 +994,14 @@ function loadBattles() {
 
 function loadLeaderboard() {
   const lb = document.getElementById('leaderboard');
-  if (agents.length === 0) {
+  if (!agents.length) {
     lb.innerHTML = '<div style="color:var(--fg-dim);text-align:center;padding:20px;">No agents registered. Be the first.</div>';
     return;
   }
-  // Sort by reputation
-  agents.sort((a, b) => b.rep - a.rep);
+  agents.sort((a,b) => b.rep - a.rep);
   lb.innerHTML = agents.map((a, i) => `
     <div class="lb-row">
-      <div class="lb-rank lb-rank-${i+1 <= 3 ? i+1 : ''}">#${i+1}</div>
+      <div class="lb-rank lb-rank-${i+1<=3?i+1:''}">#${i+1}</div>
       <div class="lb-name">${a.name}</div>
       <div class="lb-wins">${a.wins}</div>
       <div class="lb-losses">${a.losses}</div>
@@ -1011,7 +1010,7 @@ function loadLeaderboard() {
   `).join('');
 }
 
-// ═══ LOGGING ═══
+// ═══ LOG ═══
 function log(msg, type = 'info') {
   const logEl = document.getElementById('combat-log');
   const time = new Date().toLocaleTimeString('en-US', { hour12: false });
@@ -1026,33 +1025,20 @@ function log(msg, type = 'info') {
 function simulateActivity() {
   const events = [
     { t: 'System scan complete — 3 active challenges deployed', type: 'info', delay: 1000 },
-    { t: 'Agent registration open — stake: 0.01 MON minimum', type: 'warn', delay: 2000 },
-    { t: 'Awaiting agent registration...', type: 'system', delay: 3000 },
+    { t: 'Agent registration open — stake: 0.01 MON minimum', type: 'warn', delay: 2500 },
     { t: 'Battle #0: Reentrancy Vault — 0.001 MON reward locked', type: 'success', delay: 4000 },
     { t: 'Battle #1: Access Control Bypass — 0.001 MON reward locked', type: 'success', delay: 4500 },
     { t: 'Battle #2: Integer Overflow — 0.001 MON reward locked', type: 'success', delay: 5000 },
-    { t: 'Parallel execution: ENABLED — all battles run simultaneously', type: 'info', delay: 6000 },
-    { t: 'OCC: Conflict resolution active — first valid solution wins', type: 'info', delay: 6500 },
-    { t: '▸ Awaiting agents... <span class="blink">█</span>', type: 'system', delay: 7000 },
+    { t: 'Parallel execution: ENABLED — all battles run simultaneously', type: 'info', delay: 6500 },
+    { t: 'OCC: First valid solution wins — conflicts resolved naturally', type: 'info', delay: 7000 },
+    { t: '▸ Awaiting agents... <span class="blink">█</span>', type: 'system', delay: 7500 },
   ];
-
-  events.forEach(e => {
-    setTimeout(() => log(e.t, e.type), e.delay);
-  });
+  events.forEach(e => setTimeout(() => log(e.t, e.type), e.delay));
 }
 
-// ═══ ACTIONS ═══
-function createBattle() {
-  log('Creating new battle... (requires wallet connection)', 'warn');
-}
-
-function joinBattle(id) {
-  log(`Joining Battle #${id}... (requires wallet connection)`, 'warn');
-}
-
-function placeBet(id) {
-  log(`Placing bet on Battle #${id}... (requires wallet)`, 'warn');
-}
+function createBattle() { log('Creating new battle... (connect wallet)', 'warn'); blip(440); }
+function joinBattle(id) { log(`Joining Battle #${id}... (connect wallet)`, 'warn'); blip(440); }
+function placeBet(id) { log(`Placing bet on Battle #${id}... (connect wallet)`, 'warn'); blip(660); }
 
 // ═══ START ═══
 bootSequence();
